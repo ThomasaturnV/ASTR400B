@@ -156,8 +156,8 @@ def AngularMomentumEvolution(galaxy, ParticleType, start, end, n):
             print('Iteration: ' + str(i+1) + ' / ' + str(len(snap_ids)))
             
         # Saving to txt file #
-        np.savetxt(OutputName, AngMom, fmt = "%15.3f"*4, comments = '#', 
-                   header = "{:15s}{:15s}{:15s}{:15s}".format('t', 'L_tot_x', 'L_tot_y', 'L_tot_z'))
+            np.savetxt(OutputName, AngMom, fmt = "%15.3f"*4, comments = '#', 
+                    header = "{:15s}{:15s}{:15s}{:15s}".format('t', 'L_tot_x', 'L_tot_y', 'L_tot_z'))
 ### END OrbitCOM
     
 def ReadAngMomFile(FileName):
@@ -267,4 +267,24 @@ will not be relative to the same point in space
 Is this a valid approach or should I jsut increase my tolerence (delta)?
 
 3) Overall just really confused about the data analysis...
+
+--> limit it as a function of scale length, maybe like 3 or so (we did this in the hw)
+
+
+'''
+
+'''
+What I learned:
+
+- Basically I need to find the angular momentum evoltuion of the wake particles (the particles being moved around as a result of M31 traveling through the DM halo). 
+--> I can do this through a shell method, maybe 3 shells each of size scale radius a. Then I find the ang mom relative to each shell from the COM point, and I can see how each shells ang mom evolves
+in theory the shell containing M31, should be expierencing som slowing or reversal, decreasing overall ang mom. 
+
+- Then I need to consider this DM wake's effect on the satellite galaxy as a whole. 
+--> first we put a limiting shell on all the particles of the satellite (say 3a cutoff). 
+--> then I find the ang mom contribution of ll those particles relative to the host COM frame.
+--> this lets me see how the satellite is slowing and decaying over time. 
+
+Note: we could consider M31 as a point mass, and everything should still be valid to simply everything, but we need to check and compare this approximation. 
+
 '''
