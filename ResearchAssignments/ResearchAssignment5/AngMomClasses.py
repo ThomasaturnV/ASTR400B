@@ -30,6 +30,7 @@ import matplotlib.pyplot as plt
 # Image Management - Used for Gifs
 from PIL import Image
 # External (must be in same directory as ResearchAssignment3)
+from ReadFile import Read
 from CenterOfMassLimited import CenterOfMass
 
 
@@ -48,12 +49,12 @@ class HostGalaxy_AngMomEvolution:
 
         Inputs:
             - GalaxyName: string, name of the galaxy (ex: 'MW', 'M31', 'M33')
-            - a: float, scale factor (ex: 3.0)
+            - a: float, scale factor (in kpc)
             - NShells: int, number of radial shells to consider for angular momentum bins (ex: 10)
-            - RadialLimit: float, maximum radial limit of particles to be considered
+            - RadialLimit: float, maximum radial limit of particles to be considered (in kpc)
         '''
 
-        # establishing self parameters from class inputs #
+        # Establishing self parameters from class inputs #
         self.GalaxyName = GalaxyName
         self.a = a 
         self.NShells = NShells
@@ -232,7 +233,6 @@ class HostGalaxy_AngMomEvolution:
         plt.figure((f'{self.GalaxyName} Evolution-iteration{iteration}'), figsize = (12, 8))
 
         # Plotting the Angular Momentum Magnitudes #
-        Labels = ['Dark Matter', 'Disk Stars', 'Bulge Stars', 'All Particles']
         plt.plot(self.ShellRadaii, self.L_tot_Distribution[(iteration - 1)], color = 'blue') #, label = ('MW ' + Labels[ParticleType - 1]))
 
         plt.xlabel('Radial Shell (kpc)')
@@ -278,11 +278,7 @@ class HostGalaxy_AngMomEvolution:
 
         ### 
         # NOTE: we want to put a lil star where M33 is radius wise so we can see the effects of it.
-
     ### END GifGeneration
-
-
-
 ### END HostGalaxy_AngMomEvolution
 
 
@@ -292,18 +288,201 @@ class SatelliteGalaxy_AngMomEvolution:
     
     '''
 
-    def __init__(self, SatGalaxyName, HostGalaxyName):
+    def __init__(self, SatGalaxyName, Sat_a, SatRadialLimit, HostGalaxyName, Host_a, HostRadialLimit):
         '''
         here i was to treat the satellite as a point particle intilialiing its position 
 
         remember to treat this as a point mass
         '''
 
+        # Establishing self parameters from class inputs #
+        self.SatGalaxyName = SatGalaxyName
+        self.Sat_a = Sat_a
+        self.SatRadialLimit = SatRadialLimit
+
+        self.HostGalaxyName = HostGalaxyName    
+        self.Host_a = Host_a
+        self.HostRadialLimit = HostRadialLimit
+
+        # Defining relevant COM parameters #
+        self.Delta = 0.1 # kpc (tolerance for COM)
+        self.VolDec = 1.5 # volume divison factor for iterative COM calculation (set to 1.5 becuase of the Dark Matter Correction, since halo is very large)
     ### END __init__
+
+
+    def AngularMomentum(self, ParticlePositions, ParticleMass, ParticleVelocity):
+        '''
+        Description: Computes the angular momentum of one particle given its mass, position vector, and velocity vector. 
+        Each vector is relatve to the center of mass frame. Can operate on a list of particles as well. For example:
+
+        Particle Positions = [[x1, y1, z1], [x2, y2, z2], ...]
+        Particle Velocity = [[vx1, vy1, vz1], [vx2, vy2, vz2], ...]
+        Particle Mass = mass
+
+        Inputs:
+            - ParticlePositions: list of floats, of particle positions in kpc (3D vector)
+            - ParticleMass: float, prticle mass in (1e10 Msun)
+            - ParticleVelocity: list of floats, particle velocities in km/s (3D vector)
+
+        Returns:
+            - L: list of floats, angular momentum of the particles in 1e10 kpc * Msun * km/s (3D vector)
+        '''
+        L = ParticleMass * np.cross(ParticlePositions, ParticleVelocity)
+
+        return L
+    ### END AngularMomentum
+
+
+
+    def OrbitalAngularMomentumEvolution(self, start, end, n):
+        ''' 
+        Description: 
+            
+        Inputs:
+            - start: the interger number corresponding to the first snapshot to be read in
+            - end: the interget number correponding to the last snapshot to be read in
+            - n: an interger number corresponding to the amout of intervals over which the COM will be returned
+        '''
+        
+        
+        # Defining Output Filename #
+        OutputName =  f'{self.SatGalaxyName}_OrbitalAngularMomentum.txt'
+        
+        snap_ids = np.array(np.arange(start, end, n)) # array of snap designations to be read in
+        
+        # Check to end function if equal divisions of n are not achieved #
+        if abs(end - start) % n != 0:
+            print('Interval is incompatible!!!')
+            print('Function Ending ...')
+            return
+        
+        AngMom = np.zeros([len(snap_ids), 5]) # defining output list to store values
+        
+
+
+        # For loop to iterate through snap shots #
+        for i, snap_id in enumerate(snap_ids):
+            # Determining File Name #
+            ilbl = '000' + str(snap_id) # adding snap number to the value '000'
+            ilbl = ilbl[-3:] # only the last 3 digits being used
+            
+            SatFileName = '%s_'%(self.SatGalaxyName) + ilbl + '.txt' # reconstructing filename
+            HostFileName = '%s_'%(self.HostGalaxyName) + ilbl + '.txt' # reconstructing filename
+            
+            # Creating Center of Mass Object #
+            Satgal_COM = CenterOfMass(SatFileName, 1, self.SatRadialLimit) # Center of mass object using only DM particles (majority of mass) - Satellite Galaxy
+            Hostgal_COM = CenterOfMass(HostFileName, 1, self.HostRadialLimit) # Center of mass object using only DM particles (majority of mass) - Host Galaxy
+
+            
+            # Computing center of mass for object #
+            Satgal_P = Satgal_COM.COM_P(self.Delta, self.VolDec)
+            Satgal_V = Satgal_COM.COM_V(Satgal_P[0], Satgal_P[1], Satgal_P[2])
+
+            Hostgal_P = Hostgal_COM.COM_P(self.Delta, self.VolDec)
+            Hostgal_V = Hostgal_COM.COM_V(Hostgal_P[0], Hostgal_P[1], Hostgal_P[2])
+            
+            Time = Satgal_COM.time / 1000 # Time in Gyr of Snapshot
+
+
+
+            ### --- Modifications --- ####
+
+            # COM Reference Fram Vectors (position and velocity) #
+            # Position:
+            gal_COMX = Satgal_P[0].value - Hostgal_P[0].value  # x position within the host's center of mass frame
+            gal_COMY = Satgal_P[1].value - Hostgal_P[1].value # y position within the host's center of mass frame 
+            gal_COMZ = Satgal_P[2].value - Hostgal_P[2].value # z position within the host's center of mass frame
+            # Velocity:
+            gal_COMVx = Satgal_V[0].value - Hostgal_V[0].value # x velocity within the host's center of mass frame
+            gal_COMVy = Satgal_V[1].value - Hostgal_V[1].value # y velocity within the host's center of mass frame
+            gal_COMVz = Satgal_V[2].value - Hostgal_V[2].value # z velocity within the host's center of mass frame
+
+            SatMass = np.sum(Satgal_COM.m) # masses of the entire galaxy
+            ''' Check the above line, make sure that it makes it into a single mass object '''
+
+            # Reorganizing the position and velocity vectors into a 3D vector format for angular momentum calculation #
+            COMPositions = np.array([gal_COMX, gal_COMY, gal_COMZ])
+            COMVelocities = np.array([gal_COMVx, gal_COMVy, gal_COMVz])
+
+            Orbital_L = self.AngularMomentum(np.array(COMPositions), np.array(SatMass), np.array(COMVelocities))
+            L_mag = np.sqrt((Orbital_L[0] ** 2) + (Orbital_L[1] ** 2) + (Orbital_L[2] ** 2))
+
+            AngMom[i][0] = Time.value
+
+            AngMom[i][1] = Orbital_L[0]
+            AngMom[i][2] = Orbital_L[1]
+            AngMom[i][3] = Orbital_L[2]
+
+            AngMom[i][4] = L_mag
+
+            print('Iteration: ' + str(i+1) + ' / ' + str(len(snap_ids)))
+
+            # Saving to txt file #
+            np.savetxt(OutputName, AngMom, fmt = "%18.3f"*5, comments = '#', header = "{:18s}{:18s}{:18s}{:18s}{:18s}".format('t', 'L_x', 'L_y', 'L_z', 'L_mag'))
+    ### END AngularMomentumEvolution
+
+
+    def ReadAngMomFile(self, FileName):
+        ''' 
+        Description: 
+
+        Inputs:
+            - FileName: string, name of the file to be read in (ex: self.GalaxyName + '_DMAngularMomentum.txt')
+        
+        
+        '''
+        self.data = np.genfromtxt(FileName, dtype = None, names = True, skip_header = 0) # data array creation
+
+        # Reading the Time and L_tot values from the file #
+        self.Time = self.data['t']
+        self.L_x = self.data['L_x']
+        self.L_y = self.data['L_y']
+        self.L_x = self.data['L_x']
+        self.L_mag = self.data['L_mag']
+    ### END ReadAngMomFile
+
+
+    def PlotAngMom(self):
+        '''
+        Description: 
+
+        '''
+
+
+        # Figure #
+        plt.figure((f'{self.SatGalaxyName} Orbital Angular Momentum Evolution'), figsize = (12, 8))
+
+        # Plotting the Angular Momentum Magnitudes #
+        plt.plot(self.Time, self.L_mag, color = 'blue') #, label = ('MW ' + Labels[ParticleType - 1]))
+
+        plt.xlabel('Time (Gyr)')
+        plt.ylabel(r'Angular Momentum $(10^{10} kpc \, \dot{M}_{\odot} \, \mathrm{km/s})$')
+        plt.title(f'Orbital Angular Momentum Evolution of {self.SatGalaxyName} Orbiting {self.HostGalaxyName}')
+
+        plt.grid(axis = 'both', linestyle = '--', linewidth = 0.5, color = 'gray')
+
+        plt.legend()
+
+        FigName = f'{self.SatGalaxyName}OrbitalAngMomEvolution.png'
+
+        plt.savefig(FigName, dpi = 250)
+    ### END PlotAngMom
+
+
 
 ### END SatelliteGalaxy_AngMomEvolution
 
 
+'''
+We need to either document or create graph 2
+
+--> take all the COM positions of M33 
+--> the COM position of M33 needs to be in the M31 reference frame
+--> compute the orbital angular momentum for each time
+--> save the data to a file
+--> plot the data as a function of time (Gyr) and save the figure
+
+'''
 
 
 
@@ -327,13 +506,17 @@ def MAIN():
     
 
     M31 = HostGalaxy_AngMomEvolution('M31', 45, 50, (3 * 45)) # Creating M31 object
-    M33 = SatelliteGalaxy_AngMomEvolution('M33', 'M31') # Creating M33 object
+    M33 = SatelliteGalaxy_AngMomEvolution('M33', 20, (3 * 20), 'M31', 45, (3 * 45)) # Creating M33 object
 
 
 
-    M31.AngularMomentumEvolution(0, 800, 40)
-    M31.ReadAngMomFile('M31_DMAngularMomentum.txt')
-    M31.GifGeneration()
+    #M31.AngularMomentumEvolution(0, 800, 40)
+    #M31.ReadAngMomFile('M31_DMAngularMomentum.txt')
+    #M31.GifGeneration()
+
+    M33.OrbitalAngularMomentumEvolution(0, 800, 40)
+    M33.ReadAngMomFile('M33_OrbitalAngularMomentum.txt')
+    M33.PlotAngMom()
 
 
 
