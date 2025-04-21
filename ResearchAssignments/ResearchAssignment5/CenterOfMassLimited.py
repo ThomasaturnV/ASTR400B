@@ -50,7 +50,7 @@ class CenterOfMass:
         self.vz = self.data['vz'][self.index]
 
 
-    def COMdefine(self,a,b,c,m, RadialLimit):
+    def COMdefine(self,a,b,c,m):
         ''' Method to compute the COM of a generic vector quantity by direct weighted averaging.
         
         PARAMETERS
@@ -115,19 +115,23 @@ class CenterOfMass:
             ###
         ###
 
-        # xcomponent Center of mass
-        a_com = WeightedPos_a / TotalMass
-        # ycomponent Center of mass
-        b_com =  WeightedPos_b / TotalMass
-        # zcomponent Center of mass
-        c_com =  WeightedPos_c / TotalMass
+        if TotalMass != 0:
+            # xcomponent Center of mass
+            a_com = WeightedPos_a / TotalMass
+            # ycomponent Center of mass
+            b_com =  WeightedPos_b / TotalMass
+            # zcomponent Center of mass
+            c_com =  WeightedPos_c / TotalMass
 
-        # return the 3 components separately
-        return a_com, b_com, c_com
+            # return the 3 components separately
+            return a_com, b_com, c_com
+        
+        else:
+            return 0,0,0
     ### END COMdefine
     
     
-    def COM_P(self, delta):
+    def COM_P(self, delta, volDec):
         '''Method to compute the position of the center of mass of the galaxy 
         using the shrinking-sphere method.
 
@@ -135,6 +139,9 @@ class CenterOfMass:
         ----------
         delta : `float, optional`
             error tolerance in kpc. Default is 0.1 kpc
+        volDec : float
+            value specifing the division of which Rmax is decreased
+            (a good value to use is 2)
         
         RETURNS
         ----------
@@ -163,7 +170,7 @@ class CenterOfMass:
 
         # find the max 3D distance of all particles from the guessed COM                                               
         # will re-start at half that radius (reduced radius)                                                           
-        r_max = max(r_new)/2.0
+        r_max = max(r_new)/volDec
         
         # pick an initial value for the change in COM position                                                      
         # between the first guess above and the new one computed from half that volume
@@ -200,7 +207,7 @@ class CenterOfMass:
             # Before loop continues, reset : r_max, particle separations and COM                                        
 
             # reduce the volume by a factor of 2 again                                                                 
-            r_max /= 2.0
+            r_max /= volDec
             # check this.                                                                                              
             #print ("maxR", r_max)                                                                                      
 
@@ -248,7 +255,8 @@ class CenterOfMass:
         
         # the max distance from the center that we will use to determine 
         #the center of mass velocity                   
-        rv_max = 15.0*u.kpc
+        #rv_max = 15.0*u.kpc
+        rv_max = self.RadialLimit * u.kpc
 
         # determine the position of all particles relative to the center of mass position (x_COM, y_COM, z_COM)
         # write your own code below
@@ -281,5 +289,3 @@ class CenterOfMass:
         # return the COM vector
         return (np.round((v_COM * u.km / u.s), 2))  
     ### END COM_V
-     
-    
