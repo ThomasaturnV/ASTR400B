@@ -115,9 +115,11 @@ class HostGalaxy_AngMomEvolution:
             print('Function Ending ...')
             return
         
-        AngMom = np.zeros([len(snap_ids), (self.NShells + 1)]) # defining output list to store values
+        AngMom = np.zeros([len(snap_ids), (self.NShells + 1)])
 
-        SatelliteGalaxyPositions = []
+        SatelliteGalaxyPositions = np.zeros([len(snap_ids)]) 
+
+        BinAvergaeAmount = np.zeros([len(snap_ids), self.NShells])
 
         # Looping through SnapShots #
         for i, snap_id in enumerate(snap_ids):
@@ -134,7 +136,7 @@ class HostGalaxy_AngMomEvolution:
 
             # Determining Satellite Galaxy Position in Host Galaxy Reference Frame #
             SatPos, SatVel = self.SatGal.SatGalaxyVectors(Satgal_COM, gal_COM)
-            SatelliteGalaxyPositions.append(np.sqrt((SatPos[0]**2 + SatPos[1]**2 + SatPos[2]**2))) # Saving Position magnitude
+            SatelliteGalaxyPositions[i] = (np.sqrt((SatPos[0]**2 + SatPos[1]**2 + SatPos[2]**2))) # Saving Position magnitude
             
             # Computing center of mass for host galaxy #
             gal_P = gal_COM.COM_P(self.Delta, self.VolDec)
@@ -192,10 +194,14 @@ class HostGalaxy_AngMomEvolution:
 
                 # Store the total angular momentum for the shell in the AngMom array
                 AngMom[i][shell] = np.sqrt((L_tot_shell[0] ** 2) + (L_tot_shell[1] ** 2) + (L_tot_shell[2] ** 2))  # Store the magnitude of the total angular momentum for the shell
+                BinAvergaeAmount[i][shell - 1] = len(shell_indices)
             ###
 
             print('Iteration: ' + str(i+1) + ' / ' + str(len(snap_ids)))
         ###
+
+        # Printing Median number of particles in each shell (for optimizing trends) #
+        print(f'Median number of particles in each shell: {np.median(BinAvergaeAmount, axis=0)}')
 
         # Saving to txt file #
         header = "{:>20s}".format("t") + "".join(["{:>20s}".format(f"L_tot_shell_{i}") for i in range(1, self.NShells + 1)])
@@ -242,7 +248,7 @@ class HostGalaxy_AngMomEvolution:
         plt.figure((f'{self.GalaxyName} Evolution-iteration{iteration}'), figsize = (12, 8))
 
         # Plotting #
-        plt.plot(self.ShellRadaii, self.L_tot_Distribution[(iteration - 1)], color = 'black', label = f'{self.GalaxyName} Angular Momenumtum Distribution')
+        plt.scatter(self.ShellRadaii, self.L_tot_Distribution[(iteration - 1)], color = 'black', s = 150, label = f'{self.GalaxyName} Angular Momenumtum Distribution')
         plt.vlines(self.SatelliteGalaxyPositions[(iteration - 1)], ymin = -10, ymax = max(self.L_tot_Distribution[(iteration - 1)]) + 20, color = 'gray', linestyle = '--', linewidth = 5, label = f'{self.SatGal.SatGalaxyName} Position') # M33 position in the host galaxy reference frame
 
         # Plot Formatting #
@@ -501,17 +507,17 @@ def MAIN():
     
     M33 = SatelliteGalaxy_AngMomEvolution('M33', 20, (100 * 20), 'M31', 45, (10 * 45)) # Creating M33 object
 
-    M31 = HostGalaxy_AngMomEvolution('M31', 45, 100, (15 * 45), M33) # Creating M31 object
+    M31 = HostGalaxy_AngMomEvolution('M31', 45, 30, (15 * 45), M33) # Creating M31 object
 
 
 
-    #M31.AngularMomentumEvolution(0, 800, 40)
-    #M31.ReadAngMomFile('M31_DMAngularMomentum.txt')
-    #M31.GifGeneration()
+    M31.AngularMomentumEvolution(0, 800, 80)
+    M31.ReadAngMomFile('M31_DMAngularMomentum.txt')
+    M31.GifGeneration()
 
-    M33.OrbitalAngularMomentumEvolution(0, 800, 40)
-    M33.ReadAngMomFile('M33_OrbitalAngularMomentum.txt')
-    M33.PlotAngMom()
+    #M33.OrbitalAngularMomentumEvolution(0, 800, 40)
+    #M33.ReadAngMomFile('M33_OrbitalAngularMomentum.txt')
+    #M33.PlotAngMom()
 ### END MAIN
 
 ### Execution ###
@@ -525,4 +531,8 @@ MAIN()
 # switch into that folder for all the saving
 # then switch back out of it to save the gif in the main folder
 # then delete the folder and all the images in it (optional) --> make an option to...
+
+
+### No APPENDING / LISTS (Only list comprehension)
+# decrease binning for the gif to preoperly capture trend
 ###
