@@ -77,10 +77,10 @@ class CenterOfMass:
         '''
         
         # Creating a Positions array to store the 3D positions of the particles
-        Positions = []
+        Positions = np.zeros((len(m), 3))
         for index in range(0, len(m)):
             pos = np.array([a[index], b[index], c[index]])
-            Positions.append(pos)
+            Positions[index] = pos
         Positions = np.array(Positions)
 
         PositionMagnitudes = np.sqrt((Positions[:,0]**2) + (Positions[:,1]**2) + (Positions[:,2]**2))

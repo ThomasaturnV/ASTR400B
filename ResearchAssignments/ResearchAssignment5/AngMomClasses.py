@@ -162,11 +162,12 @@ class HostGalaxy_AngMomEvolution:
             gal_masses = gal_COM.m # masses of the particles in the galaxy
 
             # Reorganizing the position and velocity vectors into a 3D vector format for angular momentum calculation #
-            COMPositions = []
-            COMVelocities = []
+            COMPositions = np.zeros([len(gal_COMX), 3]) # initializing the position array
+            COMVelocities = np.zeros([len(gal_COMX), 3]) # initializing the velocity array
+            
             for index in range(len(gal_COMX)):
-                COMPositions.append([gal_COMX[index], gal_COMY[index], gal_COMZ[index]])
-                COMVelocities.append([gal_COMVx[index], gal_COMVy[index], gal_COMVz[index]])
+                COMPositions[index] = [gal_COMX[index], gal_COMY[index], gal_COMZ[index]]
+                COMVelocities[index] = [gal_COMVx[index], gal_COMVy[index], gal_COMVz[index]] 
             ###
 
             COMPositions = np.array(COMPositions) # defining numpy array for easier use
@@ -275,12 +276,12 @@ class HostGalaxy_AngMomEvolution:
         '''
 
         # Initializing Frames List (To save each frame of the gif) #
-        Frames = []
+        Frames = np.zeros([len(self.Time)]) # empty list to save each frame of the gif
 
         # Looping through each frame #
         for t in range(len(self.Time)):
             FigName = self.PlotAngMom(t + 1)
-            Frames.append(Image.open(FigName))
+            Frames[t] = Image.open(FigName) # opening the image and saving it to the frames list
         ###
 
         # Saving Gif #
@@ -533,6 +534,6 @@ MAIN()
 # then delete the folder and all the images in it (optional) --> make an option to...
 
 
-### No APPENDING / LISTS (Only list comprehension)
+
 # decrease binning for the gif to preoperly capture trend
 ###
